@@ -67,8 +67,15 @@ impl Instant {
     /// [std::time::SystemTime]: https://doc.rust-lang.org/std/time/struct.SystemTime.html
     /// [std::time::SystemTime::now]: https://doc.rust-lang.org/std/time/struct.SystemTime.html#method.now
     #[cfg(feature = "std")]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn now() -> Instant {
-        Self::from(::std::time::SystemTime::now())
+        Self::from(std::time::SystemTime::now())
+    }
+
+    #[cfg(feature = "std")]
+    #[cfg(target_arch = "wasm32")]
+    pub fn now() -> Instant {
+        Self::from(web_time::SystemTime::now())
     }
 
     /// The fractional number of milliseconds that have passed
@@ -123,6 +130,17 @@ impl From<::std::time::SystemTime> for Instant {
 impl From<Instant> for ::std::time::SystemTime {
     fn from(val: Instant) -> Self {
         ::std::time::UNIX_EPOCH + ::std::time::Duration::from_micros(val.micros as u64)
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg(target_arch = "wasm32")]
+impl From<web_time::SystemTime> for Instant {
+    fn from(other: web_time::SystemTime) -> Instant {
+        let n = other
+            .duration_since(web_time::UNIX_EPOCH)
+            .expect("start time must not be before the unix epoch");
+        Self::from_micros(n.as_secs() as i64 * 1000000 + n.subsec_micros() as i64)
     }
 }
 
